@@ -67,39 +67,6 @@ def cal_2d_lev(t1, t2):
     return f[n][m]
 
 
-def teds_test():
-    # 引入所需库
-    from table_recognition_metric import TEDS
-
-    # 初始化 TEDS 对象
-    teds = TEDS()
-
-    # 定义简单的真实标签 HTML 和预测 HTML
-    gt_html = """
-    <html><body>
-        <table>
-            <tr><td>购买方</td><td>金额</td></tr>
-            <tr><td>张三</td><td>100</td></tr>
-        </table>
-    </body></html>
-    """
-
-    pred_html = """
-    <html><body>
-        <table>
-            <tr><td>购买方</td><td>金额</td></tr>
-            <tr><td>张三</td><td>100</td></tr>
-        </table>
-    </body></html>
-    """
-
-    # 计算 TEDS 相似度分数
-    score = teds(gt_html, pred_html)
-
-    # 输出结果
-    print(f"TEDS 相似度分数: {score}")
-
-
 if __name__ == "__main__":
     # file1 = "data/parsed_table/1800_000110465911061064_10-Q_1800_1/table_4_2_a2.csv"
     # file2 = "data/parsed_table/1800_000110465911061064_10-Q_1800_1/table_4.csv"
@@ -108,6 +75,6 @@ if __name__ == "__main__":
         "test/benchmark_sample/parsed_result/sample.csv",
         "test/benchmark_sample/ground_truth/sample.csv",
     )
-    teds_test()
+    # teds_test()
     # print(cal_2d_lev(read_csv(file1), read_csv(file2)))
     # print(cal_2d_zss(read_csv(file1), read_csv(file2)))
