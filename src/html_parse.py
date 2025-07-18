@@ -1,4 +1,4 @@
-import re, csv, os
+import re, csv, os, tabulate
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -35,7 +35,7 @@ def get_style_attr(soup: BeautifulSoup, attr: str) -> str | None:
 
     merged_styles: dict[str, str] = {}
 
-    for tag in ["p", "td"]:
+    for tag in ["p", "td", "span"]:
         for item in soup.find_all(tag):
             style_str = item.get("style")
             if not style_str:
@@ -71,35 +71,39 @@ def get_indent(soup: BeautifulSoup) -> float:
         if "em" in indent_str:
             indent_value *= 16
         elif "pt" in indent_str and os.name == "nt":
-            indent_value = indent_value * 4 / 3
+            indent_value = indent_value * 4 / 3  # for 96dpi in windows
         res_pt += indent_value
     return res_pt
 
 
-def remove_empty_col(
-    table_contents: list[list[str]], row_ignored: list[int]
+def clean_table(
+    table_contents: list[list[str]], row_ignored: list[int], prefix: str
 ) -> list[list[str]]:
-    df = pd.DataFrame(table_contents).replace("", np.nan)
-    mask = ~df.index.isin(row_ignored)
-    if mask.any():
-        empty_cols = df[mask].isna().all(axis=0)
-        df = df.loc[:, ~empty_cols]
-    empty_rows = df.isna().all(axis=1)
-    df = df[~empty_rows]
-    table_contents = df.replace(np.nan, "").to_numpy().tolist()
+    df = pd.DataFrame(table_contents)
+    df_p = df.drop(index=row_ignored).replace(["", prefix], np.nan)
+    empty_rows = df_p.isna().all(axis=1)
+    empty_cols = df_p.isna().all(axis=0)
+    df_p = df_p.loc[~empty_rows, ~empty_cols]
+
+    ret = []
+    for i in df.index:
+        if i in df_p.index:
+            ret.append(df_p.loc[i].tolist())
+        elif i in row_ignored:
+            ret.append(df.loc[:, ~empty_cols].loc[i].tolist())
+
+    return ret
 
 
 def detect_sec_type(html: str) -> str:
-    soup = BeautifulSoup(html, "html.parser")
-    text_to_search = soup.get_text().upper()
     candidates = set(re.findall(r"<TYPE>\s*([^\s<]+)", html.upper()))
     known_forms = ["10K", "10Q", "S1", "S3", "20F"]
 
     for form in known_forms:
-        if form in text_to_search:
+        if form in candidates:
             return form
 
-    return "UNKNOWN"
+    return "__UNKNOWN__"
 
 
 invalid_tags = [("<ix:header", "</ix:header>")]
@@ -111,7 +115,51 @@ remove_tags = [
 ]
 
 
+def to_markdown_with_alignment(df: pd.DataFrame, alignments: str = "left", **kwargs):
+    """
+    Convert DataFrame to markdown with alignment.
+
+    Parameters:
+        df: pd.DataFrame
+        alignments: list of 'left', 'center', or 'right' for each column
+        kwargs: passed to df.to_markdown()
+
+    Returns:
+        str: Markdown table with aligned columns
+    """
+    markdown = df.to_markdown(index=kwargs.get("index", True), **kwargs)
+    lines = markdown.splitlines()
+
+    # Generate alignment line
+    align_map = {"left": ":---", "center": ":---:", "right": "---:"}
+    align_line = "| " + " | ".join(align_map.get(a, ":---") for a in alignments) + " |"
+
+    # Replace second line with alignment line
+    lines[1] = align_line
+
+    return "\n".join(lines)
+
+
 def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
+    """
+    Parse HTML file into multiple markdown/csv tables
+
+    Parameters:
+        file_path: path to the input HTML file
+        output_path: path to the output directory
+        type: output type, 'md' or 'csv'
+        min_row: minimum number of rows for a table to be considered valid
+
+    Returns:
+        None
+    """
+    if (
+        type not in ["md", "csv"]
+        or not os.path.exists(file_path)
+        or not os.path.exists(output_path)
+    ):
+        pass
+
     tables = BeautifulSoup(read_html_utf8(file_path), "html.parser").find_all("table")
 
     for it in invalid_tags:
@@ -150,12 +198,13 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                 item_str = item_str.replace("( ", "(").replace("’", "'")
                 item_str = re.sub(r"(?<=\d),(?=\d)", "", item_str)  # 1,234 => 1234
                 item_str = clean_extra_whitespace(item_str)
+                if type == "md":
+                    item_str = item_str.replace("*", "\*")
 
                 # save bold/italic
                 if item_str != "":
                     if get_style_attr(item, "font-weight") == "bold":
                         item_str = "**" + item_str + "**"
-                        # print(item_str)
                     if get_style_attr(item, "font-style") == "italic":
                         item_str = "*" + item_str + "*"
                     if get_style_attr(item, "text-transform") == "uppercase":
@@ -183,33 +232,34 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
         # add indent
         for j, row_pt in enumerate(indents_pt):
             pt_set = sorted(list(set(row_pt)))
-            # print(table_idx, pt_set)
             if len(pt_set) == 1:
                 continue
             for i in range(len(table_contents)):
                 indent_str = prefix * 2 * pt_set.index(indents_pt[j][i])
                 table_contents[i][j] = indent_str + table_contents[i][j]
 
-        # add column headers to row_ignored list
+        column_headers = []
         for i in range(len(table_contents)):
             if table_contents[i][0] == "":
-                row_ignored.append(i)
-            else:
-                break
+                column_headers.append(i)
 
-        row_ignored = list(set(row_ignored))
+        # add column headers to row_ignored list
+        row_ignored = list(set(row_ignored + column_headers))
 
-        remove_empty_col(table_contents, row_ignored)
+        # table_contents = clean_table(table_contents, row_ignored, prefix)s
 
         for i in range(len(table_contents)):
             for j in range(1, len(table_contents[i])):
                 # pre sign
-                if table_contents[i][j - 1].strip("*") in []:
+                if table_contents[i][j - 1].strip("*") in ["$"]:
                     tmp = table_contents[i][j - 1].rstrip("*")
                     table_contents[i][j] = tmp + table_contents[i][j].lstrip("*")
                     table_contents[i][j - 1] = ""
                 # post sign
-                if table_contents[i][j].strip("*") in [")", "%"]:
+                if (
+                    table_contents[i][j].strip("*") in [")", "%", ")%"]
+                    and i not in column_headers
+                ):
                     tmp = table_contents[i][j - 1].rstrip("*")
                     table_contents[i][j - 1] = tmp + table_contents[i][j].lstrip("*")
                     table_contents[i][j] = ""
@@ -244,20 +294,10 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                     )
                     table_contents[i][j - 1] = ""
 
-        # remove_empty_col(table_contents, row_ignored)
-        keep_indices = []
-        for col in range(len(table_contents[0])):
-            has_value = any(
-                table_contents[row][col] not in (None, "")
-                for row in [
-                    x for x in range(len(table_contents)) if x not in row_ignored
-                ]
-            )
-            if has_value:
-                keep_indices.append(col)
+        table_contents = clean_table(table_contents, row_ignored, prefix)
 
-        # Build new matrix with only kept columns
-        table_contents = [[row[col] for col in keep_indices] for row in table_contents]
+        if len(table_contents) < min_row:
+            continue
 
         if prev_table_contents is None:
             prev_table_contents = table_contents

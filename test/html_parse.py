@@ -1,19 +1,35 @@
 from src.html_parse import *
+import os
 
-file_path = "data/sec_samples/20-F/000119312524187406:d759422d20f.html"
+input_dir = "data/sec_samples_slimmed/"
 output_path = "test/test_output/html_parse/"
-parse(file_path, output_path, type="md")
 
 
-# print(detect_sec_type(read_html(file_path)))
-html_sample = """
-<td colspan="13" style="vertical-align: bottom; white-space: nowrap">
-                                    <ix:nonnumeric name="us-gaap:LesseeOperatingLeaseDescription" contextref="P04_01_2023To03_31_2024" id="ixv-36781">Refer to note 28— “Commitments and
-                                        contingencies—Lease<br>commitments” for more
-                                        information and balances as at March 31, 2024.<br></ix:nonnumeric>
-                                </td>
-"""
-item = BeautifulSoup(html_sample, "html.parser").find_all("td")
-# print(item[0]["colspan"])
-# print(get_indent(BeautifulSoup(html_sample, "html.parser")))
-# print(item.find("div"))
+def find_html_files(root, max_depth=2):
+    for dirpath, dirnames, filenames in os.walk(root):
+        rel = os.path.relpath(dirpath, root)
+        depth = 0 if rel == "." else rel.count(os.sep) + 1
+        if depth > max_depth:
+            dirnames[:] = []
+            continue
+        for fn in filenames:
+            if fn.lower().endswith((".html", ".htm")):
+                yield dirpath, fn
+
+
+def main():
+    files = list(find_html_files(input_dir, max_depth=2))
+    for dirpath, fname in files:
+        rel = os.path.relpath(dirpath, input_dir)
+        base, _ = os.path.splitext(fname)
+        ind = os.path.join(dirpath, fname)
+        outd = os.path.join(output_path, rel, base)
+        os.makedirs(outd, exist_ok=True)
+        parse(ind, outd, type="md")
+
+
+if __name__ == "__main__":
+    parse(
+        "data/sec_samples/10-K/brka-20241231.html",
+        "test/test_output/html_parse/10-K/brka-20241231",
+    )
