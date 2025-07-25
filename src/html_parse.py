@@ -1,4 +1,4 @@
-import re, csv, os, tabulate
+import re, csv, os, tabulate, chardet, pdb
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -10,8 +10,10 @@ def dict_sort(dict: dict[str, str]) -> dict[str, str]:
     return {k: v for k, v in sorted(dict.items(), key=lambda item: item[1])}
 
 
-def read_html_utf8(file_path: str) -> str:
-    with open(file_path, "r", encoding="utf-8") as file:
+def read_html(file_path: str) -> str:
+    with open(file_path, "rb") as file:
+        enc = chardet.detect(file.read())["encoding"]
+    with open(file_path, "r", encoding=enc) as file:
         return file.read()
 
 
@@ -34,6 +36,10 @@ def get_style_attr(soup: BeautifulSoup, attr: str) -> str | None:
         return styles
 
     merged_styles: dict[str, str] = {}
+
+    if soup.get("style"):
+        props = parse_style(soup.get("style"))
+        merged_styles.update(props)
 
     for tag in ["p", "td", "span"]:
         for item in soup.find_all(tag):
@@ -61,37 +67,68 @@ def get_style_attr(soup: BeautifulSoup, attr: str) -> str | None:
 
 def get_indent(soup: BeautifulSoup) -> float:
     res_pt = 0.0
-    for attr in ["margin-left", "margin", "text-indent"]:
+    for attr in ["margin-left", "margin", "text-indent", "padding-left"]:
         indent_str = get_style_attr(soup, attr)
         if indent_str is None:
             continue
+        if attr == "margin":
+            indent_str = indent_str.split(" ")[-1]
+        if indent_str == "auto":
+            continue
         indent_value = float(
-            indent_str.replace("pt", "").replace("em", "").replace("px", "")
+            indent_str.replace("pt", "")
+            .replace("em", "")
+            .replace("px", "")
+            .replace("in", "")
+            .replace("%", "")
         )
         if "em" in indent_str:
             indent_value *= 16
+        elif "in" in indent_str:
+            indent_value *= 72
+        elif "%" in indent_str:
+            indent_value *= 7.2
         elif "pt" in indent_str and os.name == "nt":
             indent_value = indent_value * 4 / 3  # for 96dpi in windows
         res_pt += indent_value
     return res_pt
 
 
+def replace_prefix(df: pd.DataFrame, prefix: str, replace: str = "nan") -> pd.DataFrame:
+    escaped_prefix = re.escape(prefix)
+    pattern = re.compile(f"^{escaped_prefix}*$")
+
+    def replace_cell_to_nan(cell):
+        if isinstance(cell, str) and re.match(pattern, cell):
+            return np.nan
+        return cell
+
+    def replace_cell_to_space(cell):
+        if isinstance(cell, str) and re.match(pattern, cell):
+            return " "
+        return cell
+
+    if replace == "nan":
+        return df.applymap(replace_cell_to_nan)
+    elif replace == "space":
+        return df.applymap(replace_cell_to_space)
+
+
 def clean_table(
     table_contents: list[list[str]], row_ignored: list[int], prefix: str
 ) -> list[list[str]]:
     df = pd.DataFrame(table_contents)
-    df_p = df.drop(index=row_ignored).replace(["", prefix], np.nan)
+    df_p = df.drop(index=row_ignored).replace("", np.nan)
+    df_p = replace_prefix(df_p, prefix, replace="nan")
+    if df_p.empty:
+        return table_contents
     empty_rows = df_p.isna().all(axis=1)
     empty_cols = df_p.isna().all(axis=0)
-    df_p = df_p.loc[~empty_rows, ~empty_cols]
-
+    df = df.replace(np.nan, "")
     ret = []
+    # print(df.index, df_p.index)
     for i in df.index:
-        if i in df_p.index:
-            ret.append(df_p.loc[i].tolist())
-        elif i in row_ignored:
-            ret.append(df.loc[:, ~empty_cols].loc[i].tolist())
-
+        ret.append(df.loc[i, ~empty_cols].tolist())
     return ret
 
 
@@ -160,7 +197,7 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
     ):
         pass
 
-    tables = BeautifulSoup(read_html_utf8(file_path), "html.parser").find_all("table")
+    tables = BeautifulSoup(read_html(file_path), "html.parser").find_all("table")
 
     for it in invalid_tags:
         while it[0] in tables:
@@ -175,12 +212,10 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
 
     prev_table_contents = None
     table_idx = 0
-    prefix = "&nbsp;" if type == "md" else " "
+    prefix = "&nbsp;"
 
-    for table in tqdm(tables, desc="Parsing", unit="table"):
+    for table in tqdm(tables, desc="Parsing " + file_path, unit="table"):
         rows = BeautifulSoup(str(table), "html.parser").find_all("tr")
-        if len(rows) < min_row:
-            continue
         table_contents = []
         indents_pt = []
         row_ignored = []
@@ -200,10 +235,9 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                 item_str = clean_extra_whitespace(item_str)
                 if type == "md":
                     item_str = item_str.replace("*", "\*")
-
                 # save bold/italic
                 if item_str != "":
-                    if get_style_attr(item, "font-weight") == "bold":
+                    if get_style_attr(item, "font-weight") == "bold" or item.find("b"):
                         item_str = "**" + item_str + "**"
                     if get_style_attr(item, "font-style") == "italic":
                         item_str = "*" + item_str + "*"
@@ -238,51 +272,76 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                 indent_str = prefix * 2 * pt_set.index(indents_pt[j][i])
                 table_contents[i][j] = indent_str + table_contents[i][j]
 
+        # table_contents = clean_table(table_contents, [], prefix)
+
         column_headers = []
         for i in range(len(table_contents)):
-            if table_contents[i][0] == "":
+            if len(table_contents[i]) <= 1:
+                continue
+            if table_contents[i][0].replace(prefix, "") == "" and not all(
+                table_contents[i][j].replace(prefix, "") == ""
+                for j in range(1, len(table_contents[i]))
+            ):
                 column_headers.append(i)
+            elif table_contents[i][0].replace(prefix, "") != "":
+                break
 
         # add column headers to row_ignored list
-        row_ignored = list(set(row_ignored + column_headers))
+        if len(column_headers) > 0:
+            if column_headers[-1] < len(table_contents) - 1:
+                row_ignored = list(set(row_ignored + column_headers))
+        else:
+            row_ignored = list(set(row_ignored))
 
-        # table_contents = clean_table(table_contents, row_ignored, prefix)s
+        # table_contents = clean_table(table_contents, row_ignored, prefix)
 
         for i in range(len(table_contents)):
             for j in range(1, len(table_contents[i])):
                 # pre sign
-                if table_contents[i][j - 1].strip("*") in ["$"]:
+                if (
+                    table_contents[i][j - 1].strip("*") in ["($", "("]
+                    and table_contents[i][j] != table_contents[i][j - 1]
+                ):
                     tmp = table_contents[i][j - 1].rstrip("*")
                     table_contents[i][j] = tmp + table_contents[i][j].lstrip("*")
                     table_contents[i][j - 1] = ""
                 # post sign
-                if (
-                    table_contents[i][j].strip("*") in [")", "%", ")%"]
-                    and i not in column_headers
-                ):
-                    tmp = table_contents[i][j - 1].rstrip("*")
-                    table_contents[i][j - 1] = tmp + table_contents[i][j].lstrip("*")
-                    table_contents[i][j] = ""
-                # (a) index case
-                if (
-                    re.match(r"\(.\)", table_contents[i][j].strip(" ").strip("*"))
-                    and len(table_contents[i][j - 1]) > 1
-                ):
-                    starcount = 0
-                    if table_contents[i][j - 1][0] == "*":
-                        starcount += 1
-                    if table_contents[i][j - 1][1] == "*":
-                        starcount += 1
-                    table_contents[i][j - 1] = (
-                        (
-                            table_contents[i][j - 1][:-starcount]
-                            + table_contents[i][j].strip(" ").strip("*")
-                            + "*" * starcount
+                k = j - 1
+                while k < len(table_contents[i]) - 1:
+                    k += 1
+                    if table_contents[i][k].strip(" ").strip("*") == "":
+                        continue
+                    elif (
+                        table_contents[i][k].strip("*") in [")", "%", ")%", "%)"]
+                        and i not in column_headers
+                    ):
+                        table_contents[i][j - 1] = table_contents[i][j - 1].rstrip(
+                            "*"
+                        ) + table_contents[i][k].lstrip("*")
+                        table_contents[i][k] = ""
+                    # (a) index case
+                    elif (
+                        re.match(r"\(.\)", table_contents[i][k].strip(" ").strip("*"))
+                        and len(table_contents[i][j - 1]) > 1
+                    ):
+                        starcount = 0
+                        if table_contents[i][j - 1][0] == "*":
+                            starcount += 1
+                        if table_contents[i][j - 1][1] == "*":
+                            starcount += 1
+                        table_contents[i][j - 1] = (
+                            (
+                                table_contents[i][j - 1].rstrip("*")
+                                + table_contents[i][k].strip(" ").strip("*")
+                                + "*" * starcount
+                            )
+                            if starcount > 0
+                            else table_contents[i][j - 1] + table_contents[i][k]
                         )
-                        if starcount > 0
-                        else table_contents[i][j - 1][:-1] + table_contents[i][j]
-                    )
-                    table_contents[i][j] = ""
+                        table_contents[i][k] = ""
+                    else:
+                        break
+                j = k + 1
             for j in range(1, len(table_contents[i]) - 1):
                 # connection sign
                 if table_contents[i][j].strip("*") in ["-"]:
@@ -295,34 +354,34 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                     table_contents[i][j - 1] = ""
 
         table_contents = clean_table(table_contents, row_ignored, prefix)
-
-        if len(table_contents) < min_row:
-            continue
-
         if prev_table_contents is None:
             prev_table_contents = table_contents
-        elif (
-            len(table_contents) == 1
-            and prev_table_contents
-            and (
-                re.match(r"\(.\)", table_contents[0][0])
-                or table_contents[0][0].strip() == "*"
-            )
-        ):
-            prev_table_contents = prev_table_contents + table_contents
+        if len(table_contents) == 1:
+            try:
+                if (
+                    re.match(r"\(.\)", table_contents[0][0])
+                    or table_contents[0][0].strip() == "*"
+                ):
+                    prev_table_contents = prev_table_contents + table_contents
+            except:
+                pass
         else:
             df = pd.DataFrame(prev_table_contents).replace(float("NaN"), "")
             df.replace("", np.nan, inplace=True)
             df.dropna(how="all", inplace=True)
             df.replace(np.nan, "", inplace=True)
             prev_table_contents = table_contents
+            if len(df) < min_row:
+                continue
             table_idx += 1
             if type == "md":
+                print(f"Output table_{table_idx}")
                 df = df.replace({"\$": r"\$"}, regex=True)
                 df.to_markdown(
                     os.path.join(output_path, f"table_{table_idx}.md"), index=False
                 )
             elif type == "csv":
+                df = df.replace(to_replace="&nbsp;", value=" ")
                 df.to_csv(
                     os.path.join(output_path, f"table_{table_idx}.csv"), index=False
                 )
@@ -334,6 +393,15 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                 os.path.join(output_path, f"table_{table_idx + 1}.md"), index=False
             )
         elif type == "csv":
+            df = df.replace(to_replace="&nbsp;", value=" ")
             df.to_csv(
                 os.path.join(output_path, f"table_{table_idx + 1}.csv"), index=False
             )
+
+
+if __name__ == "__main__":
+    parse(
+        "data/sec_samples/10-K/tsla-20241231.html",
+        "test/test_output/html_parse/10-K/tsla-20241231/",
+        type="md",
+    )

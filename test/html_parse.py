@@ -1,7 +1,8 @@
 from src.html_parse import *
+from src.doubao_api import call_api
 import os
 
-input_dir = "data/sec_samples_slimmed/"
+input_dir = "data/sec_samples/"
 output_path = "test/test_output/html_parse/"
 
 
@@ -25,11 +26,8 @@ def main():
         ind = os.path.join(dirpath, fname)
         outd = os.path.join(output_path, rel, base)
         os.makedirs(outd, exist_ok=True)
-        parse(ind, outd, type="md")
+        parse(ind, outd, type="csv")
 
 
 if __name__ == "__main__":
-    parse(
-        "data/sec_samples/10-K/brka-20241231.html",
-        "test/test_output/html_parse/10-K/brka-20241231",
-    )
+    main()
