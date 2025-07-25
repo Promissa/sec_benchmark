@@ -31,7 +31,6 @@ def cal_lev(r1, r2):
             return True
         if ignoreComma == False:
             return False
-
         if s1 == "" or s2 == "":
             return False
         if not all(char.isdigit() or char == "," or char == "." for char in s1):
@@ -46,7 +45,7 @@ def cal_lev(r1, r2):
                 f[i][j] = f[i - 1][j - 1]
             else:
                 f[i][j] = min(f[i - 1][j] + 1, f[i][j - 1] + 1, f[i - 1][j - 1] + 1)
-    return f[n][m]
+    return f
 
 
 def cal_2d_lev(t1, t2):
@@ -60,11 +59,65 @@ def cal_2d_lev(t1, t2):
 
     for i in range(1, n + 1):
         for j in range(1, m + 1):
-            cost = cal_lev(t1[i - 1], t2[j - 1])
+            cost = cal_lev(t1[i - 1], t2[j - 1])[len(t1[i - 1])][len(t2[j - 1])]
             f[i][j] = min(f[i - 1][j] + 1, f[i][j - 1] + 1, f[i - 1][j - 1] + cost)
 
     # print_table(f)
     return f[n][m]
+
+
+def cal_ted(t1, t2):
+    n1, m1, n2, m2 = len(t1), len(t1[0]), len(t2), len(t2[0])
+    f = np.zeros((n1 + 1, m1 + 1, n2 + 1, m2 + 1), dtype=int)
+    for i in range(n1 + 1):
+        f[i][0][0][0] = i
+    for j in range(m1 + 1):
+        f[0][j][0][0] = j
+    for k in range(n2 + 1):
+        f[0][0][k][0] = k
+    for l in range(m2 + 1):
+        f[0][0][0][l] = l
+    for i in range(n1 + 1):
+        for j in range(m1 + 1):
+            f[i, j, 0, :] = min(i, j)
+            f[i, j, :, 0] = min(i, j)
+    for k in range(n2 + 1):
+        for l in range(m2 + 1):
+            f[:, 0, k, l] = min(k, l)
+            f[0, :, k, l] = min(k, l)
+
+    row_ed = np.zeros((n1, n2, m1 + 1, m2 + 1), dtype=int)
+    col_ed = np.zeros((m1, m2, n1 + 1, n2 + 1), dtype=int)
+
+    for i in range(n1):
+        for j in range(n2):
+            row_ed[i][j] = cal_lev(t1[i], t2[j])
+
+    t1 = np.transpose(t1)
+    t2 = np.transpose(t2)
+
+    for i in range(m1):
+        for j in range(m2):
+            col_ed[i][j] = cal_lev(t1[i], t2[j])
+
+    t1 = np.transpose(t1)
+    t2 = np.transpose(t2)
+
+    # 无法确定 行/列 删除的连续性
+    for i in range(1, n1 + 1):
+        for j in range(1, m1 + 1):
+            for k in range(1, n2 + 1):
+                for l in range(1, m2 + 1):
+                    f[i][j][k][l] = min(
+                        f[i - 1][j][k][l] + 1,
+                        f[i][j - 1][k][l] + 1,
+                        f[i][j][k - 1][l] + 1,
+                        f[i][j][k][l - 1] + 1,
+                        f[i - 1][j][k - 1][l] + row_ed[i - 1][k - 1][j][l],
+                        f[i][j - 1][k][l - 1] + col_ed[j - 1][l - 1][i][k],
+                    )
+
+    return f
 
 
 if __name__ == "__main__":

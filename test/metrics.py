@@ -2,8 +2,8 @@ from src.metrics import *
 from table_recognition_metric import TEDS
 
 
-# file1 = "test/benchmark_sample/parsed_result/sample.csv"
-# file2 = "test/benchmark_sample/ground_truth/sample.csv"
+csv_file1 = "test/test_input/metrics_sample/ground_truth/sample.csv"
+csv_file2 = "test/test_input/metrics_sample/parsed_result/sample.csv"
 
 
 def teds_test():
@@ -484,7 +484,7 @@ def teds_test():
     print(f"TEDS 相似度分数: {score}")
 
 
-csv_file1 = "data/parsed_table/1800_000110465911061064_10-Q_1800_1/table_4_2_a2.csv"
-csv_file2 = "data/parsed_table/1800_000110465911061064_10-Q_1800_1/table_4.csv"
-
-print(cal_2d_lev(read_csv(csv_file1), read_csv(csv_file2)))
+# csv_file1 = "data/parsed_table/1800_000110465911061064_10-Q_1800_1/table_4_2_a2.csv"
+# csv_file2 = "data/parsed_table/1800_000110465911061064_10-Q_1800_1/table_4.csv"
+res = cal_ted(read_csv(csv_file1), read_csv(csv_file2))
+print(res)
