@@ -26,7 +26,7 @@ def main():
         ind = os.path.join(dirpath, fname)
         outd = os.path.join(output_path, rel, base)
         os.makedirs(outd, exist_ok=True)
-        parse(ind, outd, type="csv")
+        parse(ind, outd, type="md")
 
 
 if __name__ == "__main__":

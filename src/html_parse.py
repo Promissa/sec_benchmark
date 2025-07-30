@@ -375,13 +375,12 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                 continue
             table_idx += 1
             if type == "md":
-                print(f"Output table_{table_idx}")
                 df = df.replace({"\$": r"\$"}, regex=True)
                 df.to_markdown(
                     os.path.join(output_path, f"table_{table_idx}.md"), index=False
                 )
             elif type == "csv":
-                df = df.replace(to_replace="&nbsp;", value=" ")
+                df = df.replace(prefix, " ", regex=True)
                 df.to_csv(
                     os.path.join(output_path, f"table_{table_idx}.csv"), index=False
                 )
@@ -393,7 +392,7 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                 os.path.join(output_path, f"table_{table_idx + 1}.md"), index=False
             )
         elif type == "csv":
-            df = df.replace(to_replace="&nbsp;", value=" ")
+            df = df.replace(prefix, " ", regex=True)
             df.to_csv(
                 os.path.join(output_path, f"table_{table_idx + 1}.csv"), index=False
             )
@@ -401,7 +400,7 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
 
 if __name__ == "__main__":
     parse(
-        "data/sec_samples/10-K/tsla-20241231.html",
-        "test/test_output/html_parse/10-K/tsla-20241231/",
-        type="md",
+        "data/sec_samples/10-K/brka-20241231.html",
+        "test/test_output/html_parse/10-K/brka-20241231/",
+        type="csv",
     )
