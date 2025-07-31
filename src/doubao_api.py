@@ -12,7 +12,7 @@ def call_api(html: str) -> str:
         timeout=600,
     )
     response = client.chat.completions.create(
-        model="ep-20250722173435-g8qgt",
+        model="ep-20250729115406-crwd9",
         messages=[
             {
                 "role": "user",
@@ -20,14 +20,14 @@ def call_api(html: str) -> str:
                     {
                         "type": "text",
                         # "text": "Extract the column header hierarchy into tree structure and specify the number of columns contained in each leaves, noted to recognize sign as an isolated column. Only output the result in form of a markdown-styled tree with column numbers at each leaf."
-                        "text": "Extract the table contents in markdown from the html file and keep the indent using &nbsp;. Duplicate the cells with colspan."
+                        "text": "Extract the table contents into csv and keep the indent using space. Duplicate the cells with colspan and only output the result."
                         + html,
                     },
                 ],
             },
         ],
         thinking={
-            "type": "disabled",
+            "type": "enabled",
         },
         extra_headers={"x-is-encrypted": "true"},
     )
@@ -56,7 +56,7 @@ def main():
         ind = os.path.join(dirpath, fname)
         outd = os.path.join(output_path, rel, base)
         os.makedirs(outd, exist_ok=True)
-        tables = BeautifulSoup(read_html_utf8(ind), "html.parser").find_all("table")
+        tables = BeautifulSoup(read_html(ind), "html.parser").find_all("table")
         for i, table in enumerate(tables):
             with open(os.path.join(outd, f"table_{i}.md"), "w") as f:
                 f.write(call_api(str(table)))

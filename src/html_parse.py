@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 from bs4 import BeautifulSoup
 from unstructured.cleaners.core import clean_extra_whitespace
+from playwright.sync_api import sync_playwright
 
 
 def dict_sort(dict: dict[str, str]) -> dict[str, str]:
@@ -177,6 +178,37 @@ def to_markdown_with_alignment(df: pd.DataFrame, alignments: str = "left", **kwa
     return "\n".join(lines)
 
 
+def capture_table(table_html: str, output_path: str):
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page()
+        snippet = f"""<!DOCTYPE html>
+<html>
+<body>
+    {table_html}
+</body>
+</html>"""
+        page.set_content(snippet, wait_until="networkidle")
+        el = page.query_selector("table")
+        box = el.bounding_box()
+        if not box:
+            pass
+        height = box["height"]
+        tbl_x, tbl_y = box["x"], box["y"]
+        orig_w, orig_h = int(box["width"]), int(box["height"])
+        # add padding
+        padding = 30
+        pad_x = max(tbl_x - padding, 0)
+        pad_y = max(tbl_y - padding, 0)
+        img_w = orig_w + padding * 2
+        img_h = orig_h + padding * 2
+        # screenshot with padding
+        page.screenshot(
+            path=output_path,
+            clip={"x": pad_x, "y": pad_y, "width": img_w, "height": img_h},
+        )
+
+
 def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
     """
     Parse HTML file into multiple markdown/csv tables
@@ -211,6 +243,7 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
             tables = tables[:id0] + tables[id0 + id1 :]
 
     prev_table_contents = None
+    prev_table = None
     table_idx = 0
     prefix = "&nbsp;"
 
@@ -273,6 +306,19 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                 table_contents[i][j] = indent_str + table_contents[i][j]
 
         # table_contents = clean_table(table_contents, [], prefix)
+        columns = list(zip(*table_contents))
+        seen_columns = set()
+        keep_indices = []
+
+        # Identify columns to keep (first occurrence of each unique column)
+        for idx, column in enumerate(columns):
+            if column not in seen_columns:
+                seen_columns.add(column)
+                keep_indices.append(idx)
+
+        # Reconstruct table with only kept columns
+        table_contents = [[row[i] for i in keep_indices] for row in table_contents]
+        # print(pd.DataFrame(table_contents))
 
         column_headers = []
         for i in range(len(table_contents)):
@@ -294,7 +340,6 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
             row_ignored = list(set(row_ignored))
 
         # table_contents = clean_table(table_contents, row_ignored, prefix)
-
         for i in range(len(table_contents)):
             for j in range(1, len(table_contents[i])):
                 # pre sign
@@ -354,24 +399,19 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                     table_contents[i][j - 1] = ""
 
         table_contents = clean_table(table_contents, row_ignored, prefix)
-        if prev_table_contents is None:
+        if prev_table_contents is None or prev_table is None:
             prev_table_contents = table_contents
-        if len(table_contents) == 1:
-            try:
-                if (
-                    re.match(r"\(.\)", table_contents[0][0])
-                    or table_contents[0][0].strip() == "*"
-                ):
-                    prev_table_contents = prev_table_contents + table_contents
-            except:
-                pass
+            prev_table = table
         else:
             df = pd.DataFrame(prev_table_contents).replace(float("NaN"), "")
+            tmp = prev_table
             df.replace("", np.nan, inplace=True)
             df.dropna(how="all", inplace=True)
             df.replace(np.nan, "", inplace=True)
+            prev_table = table
             prev_table_contents = table_contents
             if len(df) < min_row:
+                # print(df)
                 continue
             table_idx += 1
             if type == "md":
@@ -384,6 +424,10 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                 df.to_csv(
                     os.path.join(output_path, f"table_{table_idx}.csv"), index=False
                 )
+            with open(os.path.join(output_path, f"table_{table_idx}.htm"), "w") as f:
+                f.write(str(tmp))
+            capture_table(tmp, os.path.join(output_path, f"table_{table_idx}.png"))
+
     if prev_table_contents:
         df = pd.DataFrame(prev_table_contents).replace(float("NaN"), "")
         if type == "md":
@@ -396,11 +440,16 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
             df.to_csv(
                 os.path.join(output_path, f"table_{table_idx + 1}.csv"), index=False
             )
+        with open(os.path.join(output_path, f"table_{table_idx + 1}.htm"), "w") as f:
+            f.write(str(prev_table))
+        capture_table(
+            prev_table, os.path.join(output_path, f"table_{table_idx + 1}.png")
+        )
 
 
 if __name__ == "__main__":
     parse(
         "data/sec_samples/10-K/brka-20241231.html",
-        "test/test_output/html_parse/10-K/brka-20241231/",
-        type="csv",
+        "test/test_output/10-K/brka-20241231/",
+        type="md",
     )

@@ -1,5 +1,6 @@
 from src.metrics import *
 from table_recognition_metric import TEDS
+from time import time
 
 
 csv_file1 = "test/test_input/metrics_sample/ground_truth/sample.csv"
@@ -486,5 +487,8 @@ def teds_test():
 
 # csv_file1 = "data/parsed_table/1800_000110465911061064_10-Q_1800_1/table_4_2_a2.csv"
 # csv_file2 = "data/parsed_table/1800_000110465911061064_10-Q_1800_1/table_4.csv"
-res = cal_ted(read_csv(csv_file1), read_csv(csv_file2))
-print(res)
+csv1 = read_csv(csv_file1)
+csv2 = read_csv(csv_file2)
+time_start = time()
+print(ted_astar(csv1, csv2))
+print(f"Op Time: {(time() - time_start) * 1000:.2f}ms")

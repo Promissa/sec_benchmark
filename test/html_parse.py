@@ -3,7 +3,7 @@ from src.doubao_api import call_api
 import os
 
 input_dir = "data/sec_samples/"
-output_path = "test/test_output/html_parse/"
+output_path = "test/test_output/"
 
 
 def find_html_files(root, max_depth=2):
