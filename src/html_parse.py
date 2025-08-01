@@ -209,7 +209,7 @@ def capture_table(table_html: str, output_path: str):
         )
 
 
-def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
+def parse(file_path: str, output_path: str, min_row: int = 3):
     """
     Parse HTML file into multiple markdown/csv tables
 
@@ -222,11 +222,7 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
     Returns:
         None
     """
-    if (
-        type not in ["md", "csv"]
-        or not os.path.exists(file_path)
-        or not os.path.exists(output_path)
-    ):
+    if not os.path.exists(file_path) or not os.path.exists(output_path):
         pass
 
     tables = BeautifulSoup(read_html(file_path), "html.parser").find_all("table")
@@ -414,19 +410,14 @@ def parse(file_path: str, output_path: str, type: str = "md", min_row: int = 3):
                 # print(df)
                 continue
             table_idx += 1
-            if type == "md":
-                df = df.replace({"\$": r"\$"}, regex=True)
-                df.to_markdown(
-                    os.path.join(output_path, f"table_{table_idx}.md"), index=False
-                )
-            elif type == "csv":
-                df = df.replace(prefix, " ", regex=True)
-                df.to_csv(
-                    os.path.join(output_path, f"table_{table_idx}.csv"), index=False
-                )
-            with open(os.path.join(output_path, f"table_{table_idx}.htm"), "w") as f:
+            output_name = f"table_{table_idx}"
+            df = df.replace({"\$": r"\$"}, regex=True)
+            df.to_markdown(os.path.join(output_path, f"{output_name}.md"), index=False)
+            df = df.replace({"\$": r"\$", prefix: " "}, regex=True)
+            df.to_csv(os.path.join(output_path, f"{output_name}.csv"), index=False)
+            with open(os.path.join(output_path, f"{output_name}.htm"), "w") as f:
                 f.write(str(tmp))
-            capture_table(tmp, os.path.join(output_path, f"table_{table_idx}.png"))
+            capture_table(tmp, os.path.join(output_path, f"{output_name}.png"))
 
     if prev_table_contents:
         df = pd.DataFrame(prev_table_contents).replace(float("NaN"), "")
