@@ -1,5 +1,6 @@
-import csv
+import csv, io
 import numpy as np
+import pandas as pd
 from zss import Node, simple_distance
 
 
@@ -212,6 +213,17 @@ def ted_astar(src, tgt):
                         heapq.heappush(pq, (g2 + h(R, C2), g2, R, C2))
 
     return best if best < float("inf") else compute_mods(src, tgt, set(), set())
+
+
+def read_md(file):
+    with open(file, "r") as f:
+        table_str = f.read()
+    df = (
+        pd.read_csv(io.StringIO(table_str), sep="|", index_col=1)
+        .dropna(axis=1, how="all")
+        .iloc[1:]
+    )
+    return df.to_numpy().tolist()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
-import base64
+import base64, tiktoken, cv2
 from openai import OpenAI
 from src.html_parse import read_html
+from test.html_parse import gpt41_high_detail_token_cost
 
 client = OpenAI()
 
@@ -12,11 +13,11 @@ def encode_image(image_path):
 
 
 # Path to your image
-image_path = "test/test_output/html_parse/10-K/brka-20241231/table_2.png"
+image_path = "test/test_output/10-K/brka-20241231/table_114.png"
 
 # Getting the Base64 string
 base64_image = encode_image(image_path)
-raw = read_html("test/test_output/html_parse/10-K/brka-20241231/table_2.htm")
+raw = read_html("test/test_output/10-K/brka-20241231/table_114.htm")
 
 response = client.responses.create(
     model="gpt-4.1",
@@ -25,9 +26,13 @@ response = client.responses.create(
             "role": "user",
             "content": [
                 {
+                    "type": "input_image",
+                    "image_url": f"data:image/png;base64,{base64_image}",
+                    "detail": "high",
+                },
+                {
                     "type": "input_text",
-                    "text": raw
-                    + "\n\nParse the table in the given html file into markdown, duplicate any cells with span > 1",
+                    "text": "Parse the table into markdown, duplicate any cells with span > 1. Only extract data that is visible when rendering and ignore any links if existing. Keep the indent using &nbsp;.",
                 },
             ],
         }
@@ -35,3 +40,6 @@ response = client.responses.create(
 )
 
 print(response.output_text)
+print(response.usage)
+img = cv2.imread(image_path, 0)
+print(gpt41_high_detail_token_cost(img.shape[1], img.shape[0]) + 44)
