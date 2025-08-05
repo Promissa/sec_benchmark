@@ -158,7 +158,8 @@ def ted_astar(src, tgt):
     """A* search over deletions, exploring all goal states to find minimal cost."""
     n1, m1 = len(src), len(src[0]) if src else 0
     n2, m2 = len(tgt), len(tgt[0]) if tgt else 0
-    if n1 < n2 and m1 < m2:
+    # print(n1, m1, n2, m2)
+    if n1 <= n2 and m1 <= m2:
         src, tgt = tgt, src
         n1, m1 = len(src), len(src[0]) if src else 0
         n2, m2 = len(tgt), len(tgt[0]) if tgt else 0
