@@ -5,11 +5,19 @@ from src.metrics import *
 from test.html_parse import gpt41_high_detail_token_cost
 
 client = OpenAI()
-PROMPT = """
-Parse the table into markdown. Duplicate the column header cells with colspan > 1 to keep the completeness of the structure.
-Only extract data that is visible when rendering and ignore any links if existing.
-Exclude all commas in numbers, e.g. "1,234" -> "1234". It's also required to keep bold and italic styles using markdown grammar 
-Keep the indent using &nbsp; and separate signs as individual columns if possible. DO NOT CHANGE ANY TABLE CONTENT.
+INSTRUCTION = """
+Extract the complete table structure from the given image into Markdown format without any extra content, following the requirements below.
+
+### Requirements:
+1. **Preserve structure**: Duplicate column headers with `colspan > 1` to maintain structural completeness.
+2. **Visible content only**: Extract only what is visible in the rendered image; ignore hyperlinks.
+3. **Normalize numbers**: Remove commas from numbers (e.g., `1,234` → `1234`).
+4. **Markdown formatting**: Retain **bold** and *italic* styles using Markdown syntax.
+5. **Indentation**: Preserve indentation using `&nbsp;`.
+6. **Dollar signs**: Separate dollar signs (`$`) into their own cells. Duplicate the corresponding column header when spliting.
+7. **Brackets**: Merge brackets and their contents into a single cell.
+8. **Content fidelity**: Do not modify any table content.
+9. **Table legibility**: Ensure each row has same number of columns.
 """
 
 
@@ -19,6 +27,7 @@ def call_api(image_path):
     response = client.responses.create(
         model="gpt-4.1",
         input=[
+            {"role": "developer", "content": INSTRUCTION},
             {
                 "role": "user",
                 "content": [
@@ -27,12 +36,8 @@ def call_api(image_path):
                         "image_url": f"data:image/png;base64,{base64_image}",
                         "detail": "high",
                     },
-                    {
-                        "type": "input_text",
-                        "text": PROMPT,
-                    },
                 ],
-            }
+            },
         ],
     )
 
@@ -45,7 +50,7 @@ def call_api(image_path):
 if __name__ == "__main__":
     with open("result.md", "w") as f:
         f.write(
-            call_api("test/test_output/10-K/brka-20241231/table_114.png")
+            call_api("test/test_output/10-K/brka-20241231/table_113.png")
             .strip()
             .strip("\n")
             .strip("```markdown")
@@ -54,6 +59,6 @@ if __name__ == "__main__":
     print(
         cal_2d_lev(
             read_md("result.md"),
-            read_md("test/test_output/10-K/brka-20241231/table_114.md"),
+            read_md("test/test_output/10-K/brka-20241231/table_113.md"),
         )
     )

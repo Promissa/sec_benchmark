@@ -1,34 +1,23 @@
 
-|  |  |  |  |  |  |
-|---|---|---|---|---|---|
-|  |   |  |  |  |  |
-|  |   |  | **Year ended December 31,** |  |  |
-|  |   |  | **2024** | **2023** | **2022** |
-| **Cash flows from operating activities:** |  |  |  |  |  |
-| &nbsp;&nbsp;&nbsp; Net earnings (loss) attributable to Berkshire shareholders |  | $ | 88995 | 96223 | (22759) |
-| **Adjustments to reconcile net earnings (loss) to operating cash flows:** |  |  |  |  |  |
-| &nbsp;&nbsp;&nbsp; Undistributed (earnings) losses of consolidated subsidiaries |  | ( | 14314 | 85550 | ) 39579 |
-| &nbsp;&nbsp;&nbsp; Non-cash dividends from subsidiaries |  | ( | 58339 | 1811 | ) 7220 |
-| &nbsp;&nbsp;&nbsp; Income taxes payable |  |  | 294 | (44) | 661 |
-| &nbsp;&nbsp;&nbsp; Other* |  | ( | 2666 | 1207 | ) 1799 |
-|  |  |  |  |  |  |
-| **Net cash flows from operating activities** |  |  | 13970 | 7611 | 8462 |
-| **Cash flows from investing activities:** |  |  |  |  |  |
-| &nbsp;&nbsp;&nbsp; Investments in and advances to consolidated subsidiaries, net |  | ( | 1332 | 2649 | ) 11852 |
-| &nbsp;&nbsp;&nbsp; Purchases of U.S. Treasury Bills |  | ( | 52864 | 27278 | ) 44187 |
-| &nbsp;&nbsp;&nbsp; Sales and maturities of U.S. Treasury Bills and other |  |  | 40244 | 31234 | 38043 |
-|  |  |  |  |  |  |
-| **Net cash flows from investing activities** |  | ( | 13952 | 6605 | ) 17996 |
-| **Cash flows from financing activities:** |  |  |  |  |  |
-| &nbsp;&nbsp;&nbsp; Proceeds from borrowings |  |  | 5525 | 2054 | 1970 |
-| &nbsp;&nbsp;&nbsp; Repayments of borrowings |  | ( | 1854 | 4310 | ) 602 |
-| &nbsp;&nbsp;&nbsp; Acquisition of treasury stock |  | ( | 2918 | 9117 | ) 7854 |
-|  |  |  |  |  |  |
-| **Net cash flows from financing activities** |  |  | 753 | (11427) | (6486) |
-| **Increase (decrease) in cash and cash equivalents** |  |  | 771 | 2789 | (1620) |
-| **Cash and cash equivalents at the beginning of the year** |  |  | 5566 | 2777 | 18797 |
-| **Cash and cash equivalents at the end of the year** |  | $ | 6337 | 5566 | 2777 |
-| **Other cash flow information:** |  |  |  |  |  |
-| &nbsp;&nbsp;&nbsp; Income taxes paid |  | $ | 26455 | 5630 | 2259 |
-| &nbsp;&nbsp;&nbsp; Interest paid |  |  | 318 | 297 | 332 |
-| &nbsp;&nbsp;&nbsp; Class B common stock issued in exchange for noncontrolling interests |  |  | 1045 | � | � |
+|                                                                              |                | 2024   |   | 2023   |   | 2022     |
+|------------------------------------------------------------------------------|----------------|--------|---|--------|---|----------|
+|                                                                              |                |        |   |        |   |          |
+| Income items:                                                                |                |        |   |        |   |          |
+| &nbsp;&nbsp;From consolidated subsidiaries:                                  |                |        |   |        |   |          |
+| &nbsp;&nbsp;&nbsp;&nbsp;Dividends and distributions                          | $              | 72607  | $ | 9717   | $ | 15724    |
+| &nbsp;&nbsp;&nbsp;&nbsp;Undistributed earnings (losses)                      |                | 14314  |   | 85250  |   | (39579)  |
+|                                                                              |                | 86921  |   | 95267  |   | (23855)  |
+| &nbsp;&nbsp;Equity in earnings of The Kraft Heinz Company                    |                | 745    |   | 758    |   | 628      |
+| &nbsp;&nbsp;Other income                                                     |                | 1441   |   | 899    |   | 379      |
+|                                                                              |                | 89107  |   | 96924  |   | (22848)  |
+|                                                                              |                |        |   |        |   |          |
+| Cost and expense items:                                                      |                |        |   |        |   |          |
+| &nbsp;&nbsp;General and administrative                                       |                | 381    |   | 244    |   | 131      |
+| &nbsp;&nbsp;Interest expense                                                 |                | 535    |   | 636    |   | 513      |
+| &nbsp;&nbsp;Foreign exchange gains on non-U.S. Dollar denominated debt       |                | (1376) |   | (371)  |   | (1401)   |
+| &nbsp;&nbsp;Income tax expense                                               |                | 572    |   | 192    |   | 668      |
+|                                                                              |                | 112    |   | 701    |   | (89)     |
+|                                                                              |                |        |   |        |   |          |
+| Net earnings (loss) attributable to Berkshire shareholders                   | $              | 88995  | $ | 96223  | $ | (22759)  |
+| Other comprehensive income attributable to Berkshire shareholders            |                | 179    |   | 1289   |   | 3071     |
+| Comprehensive income attributable to Berkshire shareholders                  | $              | 89174  | $ | 97512  | $ | (19688)  |
