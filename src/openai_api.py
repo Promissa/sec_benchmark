@@ -48,16 +48,16 @@ def call_api(image_path):
 
 
 if __name__ == "__main__":
-    with open("result.md", "w") as f:
-        f.write(
-            call_api("test/test_output/10-K/brka-20241231/table_113.png")
-            .strip()
-            .strip("\n")
-            .strip("```markdown")
-            .strip("```")
-        )
+    # with open("result.md", "w") as f:
+    #     f.write(
+    #         call_api("test/test_output/10-K/brka-20241231/table_113.png")
+    #         .strip()
+    #         .strip("\n")
+    #         .strip("```markdown")
+    #         .strip("```")
+    #     )
     print(
-        cal_2d_lev(
+        cal_ted(
             read_md("result.md"),
             read_md("test/test_output/10-K/brka-20241231/table_113.md"),
         )
